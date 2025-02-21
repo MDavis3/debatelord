@@ -495,188 +495,219 @@ export default function BattleArena({ topic, playerSide, playerName, demonLordTy
 
   return (
     <div 
-      className="battle-background min-h-screen relative debug-layout"
+      className="battle-background min-h-screen relative"
       style={{
         filter: `brightness(${screenBrightness}%)`,
         transition: 'filter 50ms linear'
       }}
     >
-      {/* Topic Display */}
-      <div className="absolute top-0 left-0 right-0 flex justify-center pt-4 z-20">
-        <div className="topic-box">
-          <div className="topic-title">Topic: {topic}</div>
-          <div className="phase-title">{getPhaseDisplay()}</div>
-        </div>
-      </div>
+      {/* Background Elements */}
+      <div className="stone-wall" />
+      <div className="battle-ground" />
+      <div className="battle-bg-pattern" />
 
-      {/* Status Boxes Container */}
-      <div className="status-boxes-container">
-        <div className="w-[220px]">
-          <div className="status-box p-2">
-            <div className="flex justify-between items-center mb-2">
-              <span className="mr-2 text-base truncate max-w-[100px]">{state.player.name}</span>
-              <span className="flex-shrink-0 text-base whitespace-nowrap">Lv.{state.player.level}</span>
-            </div>
-            <div>
-              <div className="hp-bar">
-                <div 
-                  className={`hp-bar-fill ${
-                    state.player.health > 50 ? '' :
-                    state.player.health > 25 ? 'yellow' : 'red'
-                  }`}
-                  style={{ width: `${(state.player.health / state.player.maxHealth) * 100}%` }}
-                />
+      {/* Game Content */}
+      <div className="relative z-10">
+        {/* Topic Display */}
+        <div className="absolute top-0 left-0 right-0 flex justify-center pt-4 z-20">
+          <div className="topic-box">
+            <div className="topic-title">Topic: {topic}</div>
+            <div className="phase-title">{getPhaseDisplay()}</div>
+          </div>
+        </div>
+
+        {/* Status Boxes Container */}
+        <div className="status-boxes-container">
+          {/* Player Status Box */}
+          <div style={{ width: '280px' }}> {/* Fixed width container */}
+            <div className="status-box">
+              <div className="flex justify-between items-center mb-2">
+                <span className="mr-2 text-base truncate max-w-[120px]">{state.player.name}</span>
+                <span className="flex-shrink-0 text-base whitespace-nowrap">Lv.{state.player.level}</span>
               </div>
-              <div className="text-right text-sm mt-1">
-                {state.player.health}/{state.player.maxHealth}
+              <div className="w-full"> {/* Ensure full width */}
+                <div className="hp-bar">
+                  <div 
+                    className={`hp-bar-fill ${
+                      state.player.health > 50 ? '' :
+                      state.player.health > 25 ? 'yellow' : 'red'
+                    }`}
+                    style={{ width: `${(state.player.health / state.player.maxHealth) * 100}%` }}
+                  />
+                </div>
+                <div className="text-right text-sm mt-1">
+                  {state.player.health}/{state.player.maxHealth}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Opponent Status Box */}
+          <div style={{ width: '280px' }}> {/* Fixed width container */}
+            <div className="status-box">
+              <div className="flex justify-between items-center mb-2">
+                <span className="mr-2 text-base truncate max-w-[120px]">{state.opponent.name}</span>
+                <span className="flex-shrink-0 text-base whitespace-nowrap">Lv.{state.opponent.level}</span>
+              </div>
+              <div className="w-full"> {/* Ensure full width */}
+                <div className="hp-bar">
+                  <div 
+                    className={`hp-bar-fill ${
+                      state.opponent.health > 500 ? '' :
+                      state.opponent.health > 250 ? 'yellow' : 'red'
+                    }`}
+                    style={{ width: `${(state.opponent.health / state.opponent.maxHealth) * 100}%` }}
+                  />
+                </div>
+                <div className="text-right text-sm mt-1">
+                  {state.opponent.health}/{state.opponent.maxHealth}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="w-[220px]">
-          <div className="status-box p-2">
-            <div className="flex justify-between items-center mb-2">
-              <span className="mr-2 text-base">{state.opponent.name}</span>
-              <span className="flex-shrink-0 text-base whitespace-nowrap">Lv.{state.opponent.level}</span>
-            </div>
-            <div>
-              <div className="hp-bar">
-                <div 
-                  className={`hp-bar-fill ${
-                    state.opponent.health > 500 ? '' :
-                    state.opponent.health > 250 ? 'yellow' : 'red'
-                  }`}
-                  style={{ width: `${(state.opponent.health / state.opponent.maxHealth) * 100}%` }}
-                />
+        {/* Position Indicators */}
+        <div className="position-indicator position-left">
+          {playerSide === 'for' ? 'FOR' : 'AGAINST'}
+        </div>
+        <div className="position-indicator position-right">
+          {playerSide === 'for' ? 'AGAINST' : 'FOR'}
+        </div>
+
+        {/* Characters Container */}
+        <div className="absolute inset-x-0 top-[250px] flex justify-between px-0">
+          {/* Player Character */}
+          <div className="character-container" style={{ width: '290px', height: '290px', marginLeft: '32px' }}>
+            <div className="character-wrapper">
+              <div className="platform-container" style={{ width: '160px', height: '30px', bottom: '-20px', position: 'absolute', left: 'calc(50% - 5px)', transform: 'translateX(-50%)' }}>
+                <div className="platform back" style={{ filter: 'blur(6px)' }} />
+                <div className="platform" style={{ filter: 'blur(6px)' }} />
               </div>
-              <div className="text-right text-sm mt-1">
-                {state.opponent.health}/{state.opponent.maxHealth}
+              <img
+                src={getSprites().playerSprite}
+                alt="Player"
+                className={`${isPlayerDamaged ? 'animate-damage' : ''}`}
+                style={{
+                  width: '217.5px',
+                  height: '217.5px',
+                  objectFit: 'contain',
+                  imageRendering: 'pixelated',
+                  margin: 'auto',
+                  display: 'block',
+                  transform: 'translateY(10px)'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Opponent Character */}
+          <div className="character-container" style={{ width: '290px', height: '290px', marginRight: '32px' }}>
+            <div className="character-wrapper">
+              <div className="platform-container" style={{ width: '300px', height: '30px', bottom: '-21px', position: 'absolute', left: 'calc(50% + 7px)', transform: 'translateX(-50%)' }}>
+                <div className="platform back" style={{ filter: 'blur(6px)' }} />
+                <div className="platform" style={{ filter: 'blur(6px)' }} />
               </div>
+              <img
+                src={getSprites().opponentSprite}
+                alt="Opponent"
+                className={`${isOpponentDamaged ? 'animate-damage' : ''}`}
+                style={{
+                  width: '290px',
+                  height: '290px',
+                  transform: `scale(${state.isDebateLordEvolved ? 1.2 : 1})`,
+                  imageRendering: 'pixelated',
+                  objectFit: 'contain'
+                }}
+              />
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Characters Container */}
-      <div className="absolute inset-x-0 top-[250px] flex justify-between px-32">
-        {/* Player Character */}
-        <div className="character-container" style={{ width: '220px', height: '220px' }}>
-          <div className="character-wrapper">
-            <div className="platform-container" style={{ width: '120px', height: '20px', bottom: '-10px', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-              <div className="platform back" style={{ filter: 'blur(3px)' }} />
-              <div className="platform" style={{ filter: 'blur(3px)' }} />
-            </div>
-            <img
-              src={getSprites().playerSprite}
-              alt="Player"
-              className={`${isPlayerDamaged ? 'animate-damage' : ''}`}
-              style={{
-                width: '120px',
-                height: '120px',
-                objectFit: 'contain',
-                imageRendering: 'pixelated'
-              }}
-            />
+        {/* Chat Container */}
+        <div className="chat-container">
+          <div className="chat-history">
+            {state.battleLog.map((log, index) => (
+              <div key={index} className={`message-bubble ${log.sender}-message`}>
+                {log.content}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Opponent Character */}
-        <div className="character-container" style={{ width: '290px', height: '290px' }}>
-          <div className="character-wrapper">
-            <div className="platform-container" style={{ width: '200px', height: '30px', bottom: '-15px', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-              <div className="platform back" style={{ filter: 'blur(6px)' }} />
-              <div className="platform" style={{ filter: 'blur(6px)' }} />
-            </div>
-            <img
-              src={getSprites().opponentSprite}
-              alt="Opponent"
-              className={`${isOpponentDamaged ? 'animate-damage' : ''}`}
-              style={{
-                width: '290px',
-                height: '290px',
-                transform: `scale(${state.isDebateLordEvolved ? 1.2 : 1})`,
-                imageRendering: 'pixelated',
-                objectFit: 'contain'
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Battle Menu */}
-      <div className="absolute bottom-4 left-0 right-0 px-4 z-10">
-        <div className={`battle-menu max-w-2xl mx-auto ${state.currentTurn === 'none' ? 'message-only' : ''}`}>
-          {state.currentTurn === 'none' ? (
-            <div>{message}</div>
-          ) : (
-            <>
-              <button
-                onClick={handleDebateClick}
-                disabled={state.currentTurn !== 'player' || isLoading || isProcessing}
-                className="battle-menu-button"
-              >
-                DEBATE
-              </button>
-              <button
-                onClick={handleFallacyClick}
-                disabled={state.currentTurn !== 'player' || isLoading || isProcessing}
-                className="battle-menu-button"
-              >
-                FALLACY
-              </button>
-              <button
-                onClick={handleConcedeClick}
-                disabled={state.currentTurn !== 'player' || isLoading || isProcessing}
-                className="battle-menu-button"
-              >
-                CONCEDE
-              </button>
-              <div /> {/* Empty div for grid alignment */}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Modals */}
-      {state.isDebateInputOpen && (
-        <DebateInput
-          onClose={() => setState(prev => ({ ...prev, isDebateInputOpen: false }))}
-          onSubmit={handleDebateSubmit}
-          phase={state.currentPhase}
-        />
-      )}
-
-      {state.isFallacySelectOpen && (
-        <div className="fixed inset-0 bg-black/50 modal-overlay flex items-center justify-center">
-          <div className="text-box w-full max-w-2xl mx-4">
-            <div className="mb-4">Which fallacy do you want to call out?</div>
-            <div className="grid grid-cols-2 gap-4">
-              {Object.values(DebateFallacy).map(fallacy => (
+        {/* Battle Menu */}
+        <div className="fixed bottom-4 left-0 right-0 px-4 z-10">
+          <div className={`battle-menu max-w-2xl mx-auto ${state.currentTurn === 'none' ? 'message-only' : ''}`}>
+            {state.currentTurn === 'none' ? (
+              <div className="text-center col-span-3">{message}</div>
+            ) : (
+              <>
                 <button
-                  key={fallacy}
-                  className="battle-menu-button text-sm"
-                  onClick={() => handleFallacySelect(fallacy)}
+                  onClick={handleDebateClick}
+                  disabled={state.currentTurn !== 'player' || isLoading || isProcessing}
+                  className="battle-menu-button"
                 >
-                  {fallacy}
+                  <span className="arrow">▶</span> DEBATE
                 </button>
-              ))}
-            </div>
-            <div className="flex justify-end mt-4">
-              <button className="battle-menu-button" onClick={() => setState(prev => ({ ...prev, isFallacySelectOpen: false }))}>
-                BACK
-              </button>
-            </div>
+                <button
+                  onClick={handleFallacyClick}
+                  disabled={state.currentTurn !== 'player' || isLoading || isProcessing}
+                  className="battle-menu-button"
+                >
+                  <span className="arrow">▶</span> FALLACY
+                </button>
+                <button
+                  onClick={handleConcedeClick}
+                  disabled={state.currentTurn !== 'player' || isLoading || isProcessing}
+                  className="battle-menu-button"
+                >
+                  <span className="arrow">▶</span> CONCEDE
+                </button>
+              </>
+            )}
           </div>
         </div>
-      )}
 
-      {state.isConcedeConfirmOpen && (
-        <ConcedeDialog
-          onClose={() => setState(prev => ({ ...prev, isConcedeConfirmOpen: false }))}
-          onConfirm={handleConcede}
-        />
-      )}
+        {/* Modals */}
+        {state.isDebateInputOpen && (
+          <DebateInput
+            onClose={() => setState(prev => ({ ...prev, isDebateInputOpen: false }))}
+            onSubmit={handleDebateSubmit}
+            phase={state.currentPhase}
+          />
+        )}
+
+        {state.isFallacySelectOpen && (
+          <div className="fixed inset-0 bg-black/50 modal-overlay flex items-center justify-center">
+            <div className="text-box w-full max-w-2xl mx-4">
+              <div className="mb-4">Which fallacy do you want to call out?</div>
+              <div className="grid grid-cols-2 gap-4">
+                {Object.values(DebateFallacy).map(fallacy => (
+                  <button
+                    key={fallacy}
+                    className="battle-menu-button text-sm"
+                    onClick={() => handleFallacySelect(fallacy)}
+                  >
+                    {fallacy}
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-end mt-4">
+                <button className="battle-menu-button" onClick={() => setState(prev => ({ ...prev, isFallacySelectOpen: false }))}>
+                  BACK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {state.isConcedeConfirmOpen && (
+          <ConcedeDialog
+            onClose={() => setState(prev => ({ ...prev, isConcedeConfirmOpen: false }))}
+            onConfirm={handleConcede}
+          />
+        )}
+      </div>
     </div>
   );
 } 
