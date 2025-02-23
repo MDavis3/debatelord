@@ -11,9 +11,8 @@ export interface DebateContext {
   maxRounds: number;
   playerArguments: string[];
   opponentArguments: string[];
-  debatePhase: 'opening' | 'middle' | 'closing';
+  debatePhase: 'battle';
   demonLordType: 'proper' | 'devious' | 'aggressive';
-  difficulty: number;
 }
 
 export interface DebateResponse {
@@ -25,15 +24,14 @@ export interface DebateResponse {
 const DEBATE_PROMPT = `You are the {demonLordType}, a master debater who engages in formal debates.
 {personality}
 
-Your responses should be:
-- {style}
+Your responses MUST be:
+{difficultyInstructions}
 - Logically structured
 - {fallacyStyle}
 - Relevant to the current debate phase
-- Difficulty level: {difficulty}/10
-- For opening statements: 300-500 words
-- For regular responses: 50-100 words
+- STRICTLY limited to 50 words maximum
 - Plain text only, no formatting or markers
+- Concise and impactful
 
 Current debate context:
 Topic: {topic}
@@ -43,7 +41,8 @@ Phase: {phase}
 Previous arguments:
 {previousArguments}
 
-Respond with a compelling argument that builds on the discussion.`;
+Respond with a {qualityLevel} argument that builds on the discussion.
+Remember: Keep your response under 50 words - quality over quantity!`;
 
 async function callGeminiAPI(prompt: string): Promise<string> {
   const response = await fetch('/api/debate', {
@@ -65,11 +64,11 @@ async function callGeminiAPI(prompt: string): Promise<string> {
 function getPersonalityPrompt(type: 'proper' | 'devious' | 'aggressive'): string {
   switch(type) {
     case 'proper':
-      return 'You maintain a formal, professional tone and focus on logical arguments.';
+      return 'You maintain a formal tone and focus on clear, straightforward arguments that match your difficulty level.';
     case 'devious':
-      return 'You are cunning and deceptive, frequently employing logical fallacies to trick your opponent.';
+      return 'You are cunning and use tricky arguments that match your difficulty level, from simple misdirection to complex fallacies.';
     case 'aggressive':
-      return 'You are fierce and confrontational, occasionally using creative insults while maintaining debate relevance.';
+      return 'You are confrontational and use strong language that matches your difficulty level, from playground taunts to sophisticated criticism.';
   }
 }
 
@@ -95,32 +94,90 @@ function getFallacyStyle(type: 'proper' | 'devious' | 'aggressive'): string {
   }
 }
 
+function getDifficultyInstructions(isEvolved: boolean): string {
+  if (!isEvolved) { // Archon form - easier
+    return `- Use simple, clear vocabulary and straightforward sentences
+- Make basic logical connections
+- Show good understanding of the topic
+- Focus on obvious comparisons and similarities
+- Keep arguments simple and direct`;
+  } else { // Immortal form - harder
+    return `- Use advanced vocabulary and well-structured arguments
+- Make strong logical connections
+- Show expert understanding with examples
+- Use sophisticated debate techniques
+- Develop complex arguments with multiple supporting points`;
+  }
+}
+
+function getQualityLevel(isEvolved: boolean): string {
+  return isEvolved ? "masterful" : "straightforward";
+}
+
 export async function generateDebateResponse(context: DebateContext): Promise<DebateResponse> {
   const prompt = DEBATE_PROMPT
     .replace('{demonLordType}', getDemonLordName(context.demonLordType))
     .replace('{personality}', getPersonalityPrompt(context.demonLordType))
     .replace('{style}', getStylePrompt(context.demonLordType))
     .replace('{fallacyStyle}', getFallacyStyle(context.demonLordType))
-    .replace('{difficulty}', context.difficulty.toString())
+    .replace('{difficultyInstructions}', getDifficultyInstructions(context.isEvolved || false))
+    .replace('{qualityLevel}', getQualityLevel(context.isEvolved || false))
     .replace('{topic}', context.topic)
     .replace('{round}', context.currentRound.toString())
     .replace('{maxRounds}', context.maxRounds.toString())
     .replace('{phase}', context.debatePhase)
     .replace('{previousArguments}', formatPreviousArguments(context));
 
-  const text = await callGeminiAPI(prompt);
+  try {
+    const response = await fetch('/api/debate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt }),
+    });
 
-  // Calculate damage based on response length, complexity, and difficulty
-  const damage = calculateDamage(text, context.difficulty);
+    if (!response.ok) {
+      throw new Error('Failed to generate response');
+    }
 
-  // Analyze for potential fallacies (more likely with devious type)
-  const fallacies = await analyzeFallacies(text);
+    const data = await response.json();
+    
+    // If we got a fallback response from the API
+    if (data.result === "I apologize, but I need a moment to formulate a clearer response. Let me rephrase my argument in a more constructive way.") {
+      // Generate a simple response based on evolved state
+      return {
+        argument: generateFallbackArgument(context.isEvolved || false),
+        damage: context.isEvolved ? 250 : 150,
+        fallacies: []
+      };
+    }
 
-  return {
-    argument: text,
-    fallacies,
-    damage
-  };
+    const text = data.result;
+    const damage = calculateDamage(text, context.isEvolved || false);
+    const fallacies = await analyzeFallacies(text);
+
+    return {
+      argument: text,
+      fallacies,
+      damage
+    };
+  } catch (error) {
+    console.error('Error generating debate response:', error);
+    return {
+      argument: generateFallbackArgument(context.isEvolved || false),
+      damage: context.isEvolved ? 250 : 150,
+      fallacies: []
+    };
+  }
+}
+
+function generateFallbackArgument(isEvolved: boolean): string {
+  if (!isEvolved) {
+    return "Let's focus on the basic facts in front of us.";
+  } else {
+    return "The evidence and logical principles consistently support our position through multiple angles.";
+  }
 }
 
 function getDemonLordName(type: 'proper' | 'devious' | 'aggressive'): string {
@@ -136,17 +193,18 @@ function getDemonLordName(type: 'proper' | 'devious' | 'aggressive'): string {
   }
 }
 
-// Update damage calculation to consider difficulty
-function calculateDamage(argument: string, difficulty: number): number {
-  // Base damage calculation
-  let damage = 40 + (difficulty * 2); // Base damage scales with difficulty
+function calculateDamage(argument: string, isEvolved: boolean): number {
+  // Base damage is lower for Archon, higher for Immortal
+  let damage = isEvolved ? 250 : 150;
 
-  // Adjust based on length (longer arguments deal more damage)
+  // Length bonus is smaller for Archon
   const words = argument.split(' ').length;
-  damage += Math.min(40, words / 2);
+  const lengthBonus = isEvolved ? Math.min(50, words / 2) : Math.min(25, words / 3);
+  damage += lengthBonus;
 
-  // Add random variance (±20%)
-  const variance = damage * 0.2;
+  // Add random variance (±10% for Archon, ±20% for Immortal)
+  const variancePercent = isEvolved ? 0.2 : 0.1;
+  const variance = damage * variancePercent;
   damage += Math.random() * variance * 2 - variance;
 
   return Math.round(damage);
@@ -154,17 +212,25 @@ function calculateDamage(argument: string, difficulty: number): number {
 
 function formatPreviousArguments(context: DebateContext): string {
   let formatted = '';
-  const maxPrevious = 2; // Only include last 2 arguments for context
+  const maxPrevious = 3; // Include last 3 arguments for better context
 
   const recentPlayerArgs = context.playerArguments.slice(-maxPrevious);
   const recentOpponentArgs = context.opponentArguments.slice(-maxPrevious);
 
+  // Add a clear separator for the debate history
+  formatted += '=== Previous Debate Arguments ===\n';
+
   recentPlayerArgs.forEach((arg, i) => {
-    formatted += `Player: ${arg}\n`;
+    formatted += `Player's Argument: "${arg}"\n`;
     if (recentOpponentArgs[i]) {
-      formatted += `Debate Lord: ${recentOpponentArgs[i]}\n`;
+      formatted += `Debate Lord's Response: "${recentOpponentArgs[i]}"\n`;
     }
+    formatted += '---\n'; // Add separator between exchanges
   });
+
+  // Add current debate phase for context
+  formatted += `Current Phase: ${context.debatePhase}\n`;
+  formatted += `Round: ${context.currentRound} of ${context.maxRounds}\n`;
 
   return formatted;
 }
@@ -198,9 +264,8 @@ export async function startDebate(topic: string): Promise<DebateResponse> {
     maxRounds: Number(process.env.NEXT_PUBLIC_DEBATE_ROUNDS) || 3,
     playerArguments: [],
     opponentArguments: [],
-    debatePhase: 'opening',
+    debatePhase: 'battle',
     demonLordType: 'proper',
-    difficulty: 5
   };
 
   return generateDebateResponse(context);
